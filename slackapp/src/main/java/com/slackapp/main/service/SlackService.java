@@ -1,5 +1,6 @@
 package com.slackapp.main.service;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,5 +11,7 @@ public interface SlackService {
 
 	Optional<List<Message>> getConversationHistory(String clientId);
 	
-	public  String  findConversation(String name);
+	Date  converTimeStampToDate(Double timeStamp);
+	
+
 }
