@@ -30,24 +30,16 @@ public class SlackController {
 	public ResponseEntity<?> conversationHistory(@RequestParam("id") String clientId){
 
 		Optional<List<Message>> response=this.slackServiceImpl.getConversationHistory(clientId);
-        
+
 		return new ResponseEntity<>(response,HttpStatus.OK);
 	}
-	
-	
+
+
 	@PostMapping("/convertTimeStampToDate")
-	
+
 	public ResponseEntity<?> getDateFromTimeStamp(@RequestParam ("timeStamp") Double timeStamp){
-		     Date DateAndTime=      this.slackServiceImpl.converTimeStampToDate(timeStamp);     
-		     return new ResponseEntity<>(DateAndTime,HttpStatus.OK);
+		Date DateAndTime=      this.slackServiceImpl.converTimeStampToDate(timeStamp);     
+		return new ResponseEntity<>(DateAndTime,HttpStatus.OK);
 	}
-//	
-//	@GetMapping("/getRetriveMessages")
-	
-//	@GetMapping("/getChannelId")
-//	public ResponseEntity<?> getChannelID(@RequestParam("channel") String channelName){
-//		  String channelId=this.slackServiceImpl.findConversation(channelName);
-//		  return new ResponseEntity<>(channelId,HttpStatus.OK);
-//	}
 
 }
