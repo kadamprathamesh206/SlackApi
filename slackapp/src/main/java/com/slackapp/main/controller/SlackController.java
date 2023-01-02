@@ -27,9 +27,9 @@ public class SlackController {
 	SlackServiceImpl slackServiceImpl;
 
 	@GetMapping("/getconversation")	
-	public ResponseEntity<?> conversationHistory(@RequestParam("id") String clientId){
+	public ResponseEntity<?> conversationHistory(){
 
-		Optional<List<Message>> response=this.slackServiceImpl.getConversationHistory(clientId);
+		Optional<List<Message>> response=this.slackServiceImpl.getConversationHistory();
 
 		return new ResponseEntity<>(response,HttpStatus.OK);
 	}

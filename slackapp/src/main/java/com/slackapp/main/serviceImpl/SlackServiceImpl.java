@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -51,20 +52,31 @@ public class SlackServiceImpl implements SlackService {
 
 	@Value("${spring.slacktoken}")
 	String slackToken;
+	
+	
+	@Value("${slack.channel}")
+	String channel;
 
 	@Autowired
 	MailProperties mailPropersties;
-	
+
 	@Autowired
 	MessageWrite messageWrite;
 
 
 	@Autowired
 	MailUtil mailUtil;
+	
+	
+	/*
+	 * 
+	 * getConversationHistory method use for fetch  all the messages of channel 
+	 */
 
-	public  Optional<List<Message>> getConversationHistory(String clientId) {
-        Date date=null;
-		Multimap<String, Multimap<String, Date>> listOfmessagesOfUser=ArrayListMultimap.create();
+	public  Optional<List<Message>> getConversationHistory() {
+		Date date=null;
+		Date currentDate=new Date(System.currentTimeMillis());
+		Multimap<String, String> listOfmessagesOfUser=ArrayListMultimap.create();
 		Optional<List<Message>> conversationHistory=null;
 		MethodsClient  client = Slack.getInstance().methods();
 		var logger = LoggerFactory.getLogger("my-awesome-slack-app");
@@ -73,7 +85,7 @@ public class SlackServiceImpl implements SlackService {
 			ConversationsHistoryResponse  result = client.conversationsHistory(r -> r
 					// The token you used to initialize your app
 					.token(slackToken)
-					.channel(clientId)
+					.channel(channel)
 					);
 			System.out.println(result);
 			conversationHistory = Optional.ofNullable(result.getMessages());
@@ -82,39 +94,27 @@ public class SlackServiceImpl implements SlackService {
 			HashMap<String,String> userWithEmailList=this.getUserList();
 			for(Message message:result.getMessages()) {
 				if(userWithEmailList.containsKey(message.getUser())) {
-			
+
 					String username= userWithEmailList.get(message.getUser());
-					Multimap<String, Date> messageWithTime=ArrayListMultimap.create();
-					 date=this.converTimeStampToDate(Double.valueOf(message.getTs()));
-					 Date currentDate=new Date(System.currentTimeMillis());
-					 System.out.println(date==currentDate);
-					 if(date.toString().equals(currentDate.toString())) {
-							messageWithTime.put(message.getText(), date);
-						    listOfmessagesOfUser.put(username, messageWithTime);
-						    this.messageWrite.messageWriter(listOfmessagesOfUser,date);
-						    mailUtil.mailSender(mailPropersties ,date);
-					 }
-
-				
-
+					//Multimap<String, Date> messageWithTime=ArrayListMultimap.create();
+					date=this.converTimeStampToDate(Double.valueOf(message.getTs()));
 					
-
-
+					if(date.toString().equals(currentDate.toString())) {
+						listOfmessagesOfUser.put(username, message.getText());
+						
+						
+					}
+					
 				}
-	}
-			
+			}
+			this.messageWrite.messageWriter(listOfmessagesOfUser,currentDate);
+			mailUtil.mailSender(mailPropersties ,currentDate);
+
 			System.out.println(listOfmessagesOfUser);
 		}
 		catch(Exception exception) {
-		    logger.debug(exception.getMessage());
+			logger.debug(exception.getMessage());
 		}
-
-		//		for(Object username : listOfmessagesOfUser.keySet()) {
-		////			if(userWithEmailList.containsKey(username)) {
-		//				Collection<String> messages= listOfmessagesOfUser.get((String) username);
-						
-		////			}
-		//		}
 		return conversationHistory;
 
 
@@ -122,8 +122,12 @@ public class SlackServiceImpl implements SlackService {
 
 
 
-
-
+    /*
+     * 
+     *  getUserList method use for fetching all the users from slack
+     * 
+     * 
+     */
 	public HashMap<String,String> getUserList() {
 		HashMap<String,String> userWithEmail=new HashMap<>();
 		UsersListResponse userListResponse;
@@ -134,14 +138,6 @@ public class SlackServiceImpl implements SlackService {
 					.token(slackToken)
 					);
 			List<com.slack.api.model.User> users=   userList.getMembers();
-			//			for(com.slack.api.model.User user:users) {
-			//				System.out.println(user.getProfile().getEmail());
-			//				if(user.getProfile().getEmail()==null){
-			//					continue;
-			//				}else {
-			//					userWithEmail.put(user.getId(), user.getProfile().getEmail());
-			//                    continue;
-			//				}
 			int value=0;
 			while(users.size()>value) {
 				System.out.println(users.get(value).getProfile().getEmail());
@@ -160,16 +156,19 @@ public class SlackServiceImpl implements SlackService {
 
 	}
 
-
+  
 
 	@Override
 	public Date converTimeStampToDate(Double timeStamp) {
 		Date dayAndDate = new Date(  (long) (timeStamp * 1000));
-
-
 		System.out.println(dayAndDate);
-		//		System.out.println(dayAndDate.getDate()+" "+dayAndDate.getMonth()+" "+dayAndDate.getDay());
 		return dayAndDate;
+	}
+
+
+	@Scheduled(cron = "0 39 14 * * ?")
+	public void sheduling() {
+		getConversationHistory();
 	}
 
 
