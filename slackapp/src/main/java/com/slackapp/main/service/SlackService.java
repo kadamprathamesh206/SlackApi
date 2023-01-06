@@ -10,7 +10,7 @@ import com.slack.api.model.Message;
 
 public interface SlackService {
 
-	Optional<List<Message>> getConversationHistory();
+	String getConversationHistory();
 	
 	Date  converTimeStampToDate(Double timeStamp);
 	

@@ -31,12 +31,13 @@ import com.google.common.collect.Multimap;
 import com.slack.api.Slack;
 import com.slack.api.methods.MethodsClient;
 import com.slack.api.methods.SlackApiException;
-import com.slack.api.methods.response.admin.users.AdminUsersListResponse.User;
+
 import com.slack.api.methods.response.conversations.ConversationsHistoryResponse;
 import com.slack.api.methods.response.conversations.ConversationsListResponse;
 import com.slack.api.methods.response.users.UsersListResponse;
 import com.slack.api.model.Conversation;
 import com.slack.api.model.Message;
+import com.slack.api.model.User;
 import com.slackapp.main.service.SlackService;
 
 import com.slackapp.main.util.MailProperties;
@@ -52,8 +53,8 @@ public class SlackServiceImpl implements SlackService {
 
 	@Value("${spring.slacktoken}")
 	String slackToken;
-	
-	
+
+
 	@Value("${slack.channel}")
 	String channel;
 
@@ -66,70 +67,63 @@ public class SlackServiceImpl implements SlackService {
 
 	@Autowired
 	MailUtil mailUtil;
-	
-	
+
+
 	/*
 	 * 
 	 * getConversationHistory method use for fetch  all the messages of channel 
 	 */
 
-	public  Optional<List<Message>> getConversationHistory() {
+	public  String getConversationHistory() {
 		Date date=null;
 		Date currentDate=new Date(System.currentTimeMillis());
 		Multimap<String, String> listOfmessagesOfUser=ArrayListMultimap.create();
 		Optional<List<Message>> conversationHistory=null;
+
 		MethodsClient  client = Slack.getInstance().methods();
-		var logger = LoggerFactory.getLogger("my-awesome-slack-app");
-		try {
-			// Call the conversations.history method using the built-in WebClient
-			ConversationsHistoryResponse  result = client.conversationsHistory(r -> r
-					// The token you used to initialize your app
-					.token(slackToken)
-					.channel(channel)
-					);
-			System.out.println(result);
-			conversationHistory = Optional.ofNullable(result.getMessages());
-			System.out.println(result.getMessages());
-
-			HashMap<String,String> userWithEmailList=this.getUserList();
-			for(Message message:result.getMessages()) {
-				if(userWithEmailList.containsKey(message.getUser())) {
-
-					String username= userWithEmailList.get(message.getUser());
-					//Multimap<String, Date> messageWithTime=ArrayListMultimap.create();
-					date=this.converTimeStampToDate(Double.valueOf(message.getTs()));
-					
-					if(date.toString().equals(currentDate.toString())) {
-						listOfmessagesOfUser.put(username, message.getText());
-						
-						
+		ConversationsListResponse channelList=publicChannelList();
+		HashMap<String,String> userWithEmailList=this.getUserList();                                  
+		for(Conversation channel:channelList.getChannels()) {
+			System.out.println(channel.getName());
+			var logger = LoggerFactory.getLogger("my-awesome-slack-app");
+			try {
+				// Call the conversations.history method using the built-in WebClient
+				ConversationsHistoryResponse  result = client.conversationsHistory(r -> r
+						// The token you used to initialize your app
+						.token(slackToken)
+						.channel(channel.getId())
+						);
+				for(Message message:result.getMessages()) {
+					if(userWithEmailList.containsKey(message.getUser())) {
+						String username= userWithEmailList.get(message.getUser());
+						date=this.converTimeStampToDate(Double.valueOf(message.getTs()));
+						if(date.toString().equals(currentDate.toString())) {
+							listOfmessagesOfUser.put(username, message.getText()+" ,Time :"+this.convertTime(Double.valueOf(message.getTs())));
+						}
 					}
-					
 				}
+				this.messageWrite.messageWriter(listOfmessagesOfUser,channel.getName(),currentDate);
+				listOfmessagesOfUser.clear();
 			}
-			this.messageWrite.messageWriter(listOfmessagesOfUser,currentDate);
-			mailUtil.mailSender(mailPropersties ,currentDate);
-
-			System.out.println(listOfmessagesOfUser);
+			catch(Exception exception) {
+				logger.debug(exception.getMessage());
+			}
 		}
-		catch(Exception exception) {
-			logger.debug(exception.getMessage());
-		}
-		return conversationHistory;
+		String message=	mailUtil.mailSender(mailPropersties ,channelList.getChannels(),currentDate);
 
-
+		return message;
 	}
 
 
 
-    /*
-     * 
-     *  getUserList method use for fetching all the users from slack
-     * 
-     * 
-     */
+	/*
+	 * 
+	 *  getUserList method use for fetching all the users from slack
+	 * 
+	 * 
+	 */
 	public HashMap<String,String> getUserList() {
-		HashMap<String,String> userWithEmail=new HashMap<>();
+		HashMap<String,String> userWithName=new HashMap<>();
 		UsersListResponse userListResponse;
 		MethodsClient  client = Slack.getInstance().methods();
 		try {
@@ -138,25 +132,37 @@ public class SlackServiceImpl implements SlackService {
 					.token(slackToken)
 					);
 			List<com.slack.api.model.User> users=   userList.getMembers();
-			int value=0;
-			while(users.size()>value) {
-				System.out.println(users.get(value).getProfile().getEmail());
-				if(users.get(value).getProfile().getRealName()!=null) {
-					userWithEmail.put(users.get(value).getId(), users.get(value).getProfile().getRealName());
+			for(User user:users) {
+				if(user.getProfile().getRealName()!=null) {
+					userWithName.put(user.getId(), user.getProfile().getRealName());
 				}
-				value++;
 			}
-			System.out.println(userWithEmail);
+			System.out.println(userWithName);
 
 
 		}catch(Exception exception) {
 			logger.debug(exception.getMessage());
 		}
-		return userWithEmail;
+		return userWithName;
 
 	}
 
-  
+	/*
+	 *  convertime method use for convert timestamp to util date 
+	 *  
+	 */
+
+	public String convertTime(Double string)
+	{
+		java.util.Date dateWithTime = new java.util.Date( (long) (string * 1000));
+		return dateWithTime.getHours()+" "+dateWithTime.getMinutes()+" "+dateWithTime.getSeconds();
+	}
+
+	/*
+	 * 
+	 *   converTimeStampToDate method use for convert timestamp to sql date
+	 * 
+	 */
 
 	@Override
 	public Date converTimeStampToDate(Double timeStamp) {
@@ -166,15 +172,30 @@ public class SlackServiceImpl implements SlackService {
 	}
 
 
-	@Scheduled(cron = "0 39 14 * * ?")
-	public void sheduling() {
-		getConversationHistory();
+	/*
+	 *  
+	 * publicChannelList method used for fetch the public channel from channel
+	 * 
+	 * 
+	 */
+	public ConversationsListResponse publicChannelList() {
+		MethodsClient client = Slack.getInstance().methods();
+		var logger = LoggerFactory.getLogger("my-awesome-slack-app");
+		ConversationsListResponse result=new ConversationsListResponse();
+		try {
+			// Call the conversations.list method using the built-in WebClient
+			result = client.conversationsList(r -> r
+					// The token you used to initialize your app
+					.token(slackToken)
+					);
+
+		}catch(Exception exception) {
+			logger.debug(exception.getMessage());
+		}
+		return result; 
+
 	}
-
-
-
-
-
-
-
 }
+
+
+

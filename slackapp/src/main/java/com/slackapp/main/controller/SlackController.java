@@ -29,14 +29,13 @@ public class SlackController {
 	@GetMapping("/getconversation")	
 	public ResponseEntity<?> conversationHistory(){
 
-		Optional<List<Message>> response=this.slackServiceImpl.getConversationHistory();
+		String message=this.slackServiceImpl.getConversationHistory();
 
-		return new ResponseEntity<>(response,HttpStatus.OK);
+		return new ResponseEntity<>(message,HttpStatus.OK);
 	}
 
 
 	@PostMapping("/convertTimeStampToDate")
-
 	public ResponseEntity<?> getDateFromTimeStamp(@RequestParam ("timeStamp") Double timeStamp){
 		Date DateAndTime=      this.slackServiceImpl.converTimeStampToDate(timeStamp);     
 		return new ResponseEntity<>(DateAndTime,HttpStatus.OK);

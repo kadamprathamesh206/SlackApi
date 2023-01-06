@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.google.common.collect.Multimap;
+import com.slack.api.audit.Actions.File;
 
 @Component
 public class MessageWrite {
@@ -23,38 +24,29 @@ public class MessageWrite {
 	@Value("${file.path}")
 	String filepath;
 
-	public void messageWriter(Multimap<String, String> content,Date date) {
-		//		Path fileName = Path.of(
-		//				""+filepath+""+date+".txt");
-		try {
-			//			Files.writeString(fileName, content.toString());
-			//			  FileWriter name = new FileWriter(""+filepath+""+date+".txt");
-			//			     BufferedWriter out = new BufferedWriter(name);
-			//			      do {                 
-			//			        a=x.nextLine();//scanner x grabs next line and sets it string a
-			//			        out.write(a);//writes a to file
-			//			      } while(((Object) content.hasNext());
-			//			      out.close();//closees file
-			//			   } catch (IOException ioe){
-			//			      System.out.println("file writer error");
-			//			  }
-			FileWriter fw = new FileWriter(""+filepath+""+date+".txt",true);
-			PrintWriter out = new PrintWriter(fw);
+	public void messageWriter(Multimap<String, String> content,String channelname,Date date) {
 		
+		try {
+		
+			java.io.File f1 =new java.io.File(filepath+date.toString());
+			if(!f1.mkdir()) {
+				f1.mkdir();
+			}
+			;
+			String newPath=filepath+date.toString()+"/"+channelname;
+			java.io.File file=new java.io.File(""+newPath+".txt");
+			file.createNewFile();
+			PrintWriter printwriter = new PrintWriter(file);
 			for(String key:content.keySet()) {
-				out.println("Username"+"="+key.toString());
-			
+				printwriter.println("Username"+"="+key.toString());
 				int count=1;
-			
 				Collection<String> messages=content.get(key);
 				for(String message:messages) {
-                  out.println(count+++" "+message.toString());
-
+					printwriter.println(count+++" "+message.toString());
 				}
-				out.println("----------------------------------><-----------------------------");
-
+				printwriter.println("----------------------------------><-----------------------------");
 			}
-			out.close();
+			printwriter.close();
 
 			logger.debug("File write successfully");
 		} catch (IOException ioException) {
