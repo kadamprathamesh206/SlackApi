@@ -35,22 +35,30 @@ public class MailUtil {
 	private static final Logger logger = LoggerFactory.getLogger(MailUtil.class);
 	@Autowired
 	JavaMailSender mailSender;
-
+   
+	@Value("${spring.mail.username}")
+	private String username;
+	
+	@Value("${mail.address.to}")
+	private String to;
+	
+	@Value("${mail.address.cc}")
+    private String cc;
 
 	@Value("${file.path}")
 	String path;
+	
 
 
 
-	public String  mailSender(MailProperties mailPropersties,List<Conversation> channelNames,Date date) {
+	public boolean  mailSender(List<Conversation> channelNames,Date date) {
 
 		try {
-
 			MimeMessage message = mailSender.createMimeMessage();
 			MimeMessageHelper helper=new MimeMessageHelper(message,true);
-			helper.setFrom(mailPropersties.getUsername());
-			helper.setTo(mailPropersties.getTo());
-			helper.setCc(mailPropersties.getCc());
+			helper.setFrom(username);
+			helper.setTo(to);
+			helper.setCc(cc);
 			helper.setSubject("slack message data");
 			helper.setText("Please check the attachment for your reference.");
 			MimeMultipart multipart=new MimeMultipart();
@@ -62,15 +70,18 @@ public class MailUtil {
 			}
 			message.setContent(multipart);
 			mailSender.send(message);
+			return true;
+			
 		
 
 		}
 		catch(Exception exception) {
 			logger.debug(exception.getMessage());
 		}
+		
 
-
-          return "Email Send Successfully";
+         return false;
+          
 	}
 
 

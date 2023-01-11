@@ -9,29 +9,40 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
-import com.slackapp.main.util.MailProperties;
+
 
 @Configuration
 public class MailConfig {
-	
-	@Autowired
-	MailProperties mailProperties;
 
-    @Bean
+	@Value("${spring.mail.host}")
+	private String host;
+
+	@Value("${spring.mail.port}")
+	private String port;
+
+	@Value("${spring.mail.password}")
+	private String password;
+
+	@Value("${spring.mail.username}")
+	private String username;
+
+
+
+	@Bean
 	public JavaMailSender getJavaMailSender() {
-	    JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-	    mailSender.setHost(mailProperties.getHost());
-	     int mailport=Integer.parseInt(mailProperties.getPort());
-	    mailSender.setPort(mailport);
-	    mailSender.setUsername(mailProperties.getUsername());
-	    mailSender.setPassword(mailProperties.getPassword());
-	    Properties props = mailSender.getJavaMailProperties();
-	    props.put("mail.transport.protocol", "smtp");
-	    props.put("mail.smtp.auth", "true");
-	    props.put("mail.smtp.starttls.enable", "true");
-	    props.put("mail.debug", "true");
-	    
-	    return mailSender;
+		JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+		mailSender.setHost(host);
+		int mailport=Integer.parseInt(port);
+		mailSender.setPort(mailport);
+		mailSender.setUsername(username);
+		mailSender.setPassword(password);
+		Properties props = mailSender.getJavaMailProperties();
+		props.put("mail.transport.protocol", "smtp");
+		props.put("mail.smtp.auth", "true");
+		props.put("mail.smtp.starttls.enable", "true");
+		props.put("mail.debug", "true");
+
+		return mailSender;
 	}
-	
+
 }

@@ -17,14 +17,14 @@ import org.springframework.stereotype.Component;
 import com.google.common.collect.Multimap;
 import com.slack.api.audit.Actions.File;
 
-@Component
-public class MessageWrite {
+
+public class FileWrite {
 	private static final Logger logger = LoggerFactory.getLogger(MailUtil.class);
 
-	@Value("${file.path}")
-	String filepath;
+	
+	
 
-	public void messageWriter(Multimap<String, String> content,String channelname,Date date) {
+	public boolean messageWriter(Multimap<String, String> content,String channelname,Date date,String filepath) {
 		
 		try {
 		
@@ -37,10 +37,16 @@ public class MessageWrite {
 			java.io.File file=new java.io.File(""+newPath+".txt");
 			file.createNewFile();
 			PrintWriter printwriter = new PrintWriter(file);
+			if(content.isEmpty()) {
+				printwriter.println("No messages for this channel");
+			}
+			
 			for(String key:content.keySet()) {
+				
 				printwriter.println("Username"+"="+key.toString());
 				int count=1;
 				Collection<String> messages=content.get(key);
+				
 				for(String message:messages) {
 					printwriter.println(count+++" "+message.toString());
 				}
@@ -53,6 +59,7 @@ public class MessageWrite {
 			// TODO Auto-generated catch block
 			logger.debug(ioException.getMessage());
 		}
+		return true;
 	}
 
 

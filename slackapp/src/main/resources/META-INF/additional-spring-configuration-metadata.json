@@ -1,0 +1,27 @@
+{"properties": [
+  {
+    "name": "file.path",
+    "type": "java.lang.String",
+    "description": "A description for 'file.path'"
+  },
+  {
+    "name": "mail.address.to",
+    "type": "java.lang.String",
+    "description": "A description for 'mail.address.to'"
+  },
+  {
+    "name": "mail.isMail",
+    "type": "java.lang.String",
+    "description": "A description for 'mail.isMail'"
+  },
+  {
+    "name": "spring.slacktoken",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.slacktoken'"
+  },
+  {
+    "name": "mail.address.cc",
+    "type": "java.lang.String",
+    "description": "A description for 'mail.address.cc'"
+  }
+]}

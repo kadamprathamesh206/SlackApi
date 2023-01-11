@@ -14,24 +14,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
-
-import javax.naming.spi.DirStateFactory.Result;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.slack.api.Slack;
 import com.slack.api.methods.MethodsClient;
-import com.slack.api.methods.SlackApiException;
-
 import com.slack.api.methods.response.conversations.ConversationsHistoryResponse;
 import com.slack.api.methods.response.conversations.ConversationsListResponse;
 import com.slack.api.methods.response.users.UsersListResponse;
@@ -39,13 +30,12 @@ import com.slack.api.model.Conversation;
 import com.slack.api.model.Message;
 import com.slack.api.model.User;
 import com.slackapp.main.service.SlackService;
-
-import com.slackapp.main.util.MailProperties;
+import com.slackapp.main.util.DateUtil;
+import com.slackapp.main.util.FileWrite;
 import com.slackapp.main.util.MailUtil;
-import com.slackapp.main.util.MessageWrite;
 
-import jakarta.mail.Authenticator;
-import jakarta.mail.Session;
+
+
 
 @Service
 public class SlackServiceImpl implements SlackService {
@@ -53,20 +43,13 @@ public class SlackServiceImpl implements SlackService {
 
 	@Value("${spring.slacktoken}")
 	String slackToken;
-
-
-	@Value("${slack.channel}")
-	String channel;
-
-	@Autowired
-	MailProperties mailPropersties;
-
-	@Autowired
-	MessageWrite messageWrite;
-
+	
+	@Value("${file.path}")
+	String filepath;
 
 	@Autowired
 	MailUtil mailUtil;
+
 
 
 	/*
@@ -74,11 +57,14 @@ public class SlackServiceImpl implements SlackService {
 	 * getConversationHistory method use for fetch  all the messages of channel 
 	 */
 
-	public  String getConversationHistory() {
+	public  boolean  getConversationHistory() {
+
+		DateUtil dateutil=new DateUtil();
 		Date date=null;
 		Date currentDate=new Date(System.currentTimeMillis());
 		Multimap<String, String> listOfmessagesOfUser=ArrayListMultimap.create();
 		Optional<List<Message>> conversationHistory=null;
+		FileWrite fileWriter=new FileWrite();
 
 		MethodsClient  client = Slack.getInstance().methods();
 		ConversationsListResponse channelList=publicChannelList();
@@ -96,22 +82,29 @@ public class SlackServiceImpl implements SlackService {
 				for(Message message:result.getMessages()) {
 					if(userWithEmailList.containsKey(message.getUser())) {
 						String username= userWithEmailList.get(message.getUser());
-						date=this.converTimeStampToDate(Double.valueOf(message.getTs()));
+						date=dateutil.converTimeStampToDate(Double.valueOf(message.getTs()));
 						if(date.toString().equals(currentDate.toString())) {
-							listOfmessagesOfUser.put(username, message.getText()+" ,Time :"+this.convertTime(Double.valueOf(message.getTs())));
+							listOfmessagesOfUser.put(username, message.getText()+" ,Time :"+dateutil.convertTime(Double.valueOf(message.getTs())));
 						}
 					}
 				}
-				this.messageWrite.messageWriter(listOfmessagesOfUser,channel.getName(),currentDate);
-				listOfmessagesOfUser.clear();
+				boolean fileWriterResult=fileWriter.messageWriter(listOfmessagesOfUser,channel.getName(),currentDate,filepath);
+				if(fileWriterResult) {
+					listOfmessagesOfUser.clear();
+					continue;
+				}
+				else {
+					return false;
+				}
 			}
 			catch(Exception exception) {
-				logger.debug(exception.getMessage());
+				logger.error(exception.getMessage());
 			}
 		}
-		String message=	mailUtil.mailSender(mailPropersties ,channelList.getChannels(),currentDate);
+		return true;
 
-		return message;
+
+
 	}
 
 
@@ -141,34 +134,10 @@ public class SlackServiceImpl implements SlackService {
 
 
 		}catch(Exception exception) {
-			logger.debug(exception.getMessage());
+			logger.error(exception.getMessage());
 		}
 		return userWithName;
 
-	}
-
-	/*
-	 *  convertime method use for convert timestamp to util date 
-	 *  
-	 */
-
-	public String convertTime(Double string)
-	{
-		java.util.Date dateWithTime = new java.util.Date( (long) (string * 1000));
-		return dateWithTime.getHours()+" "+dateWithTime.getMinutes()+" "+dateWithTime.getSeconds();
-	}
-
-	/*
-	 * 
-	 *   converTimeStampToDate method use for convert timestamp to sql date
-	 * 
-	 */
-
-	@Override
-	public Date converTimeStampToDate(Double timeStamp) {
-		Date dayAndDate = new Date(  (long) (timeStamp * 1000));
-		System.out.println(dayAndDate);
-		return dayAndDate;
 	}
 
 
@@ -190,10 +159,26 @@ public class SlackServiceImpl implements SlackService {
 					);
 
 		}catch(Exception exception) {
-			logger.debug(exception.getMessage());
+			logger.error(exception.getMessage());
 		}
 		return result; 
 
+	}
+
+
+	public boolean sendingEmail() {
+		try {
+			List<Conversation> channelList=  this.publicChannelList().getChannels();
+			Date currentDate=new Date(System.currentTimeMillis());
+			boolean mailSendingResult= mailUtil.mailSender(channelList, currentDate);
+			if(mailSendingResult) {
+				return true;
+			}
+		}catch(Exception exception) {
+			logger.error(exception.getMessage());
+		}
+
+		return false;
 	}
 }
 
