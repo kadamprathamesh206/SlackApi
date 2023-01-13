@@ -6,13 +6,13 @@ import org.springframework.stereotype.Service;
 
 import com.slackapp.main.serviceImpl.SlackServiceImpl;
 
-@Service
-public class Sheduler {
-  
-	@Autowired SlackServiceImpl slackserviceImpl;
-	
-	@Scheduled(cron = "0 9 16 * * ?")
-	public void sheduling() {
-		slackserviceImpl.getConversationHistory();
-	}
-}
+//@Service
+//public class Sheduler {
+//  
+//	@Autowired SlackServiceImpl slackserviceImpl;
+//	
+//	@Scheduled(cron = "0 9 16 * * ?")
+//	public void sheduling() {
+//		slackserviceImpl.getConversationHistory();
+//	}
+//}

@@ -51,7 +51,7 @@ public class MailUtil {
 
 
 
-	public boolean  mailSender(List<Conversation> channelNames,Date date) {
+	public boolean  mailSender(String channelNames,Date date) {
 
 		try {
 			MimeMessage message = mailSender.createMimeMessage();
@@ -62,12 +62,12 @@ public class MailUtil {
 			helper.setSubject("slack message data");
 			helper.setText("Please check the attachment for your reference.");
 			MimeMultipart multipart=new MimeMultipart();
-			for(Conversation channel:channelNames) {
+//			for(Conversation channel:channelNames) {
 				MimeBodyPart attachment=new MimeBodyPart();
-				String fullPath=""+path+""+date+"/"+channel.getName()+".txt";
+				String fullPath=""+path+""+date+"/"+channelNames+".txt";
 				attachment.attachFile(new File(fullPath));
 				multipart.addBodyPart(attachment);
-			}
+//			}
 			message.setContent(multipart);
 			mailSender.send(message);
 			return true;

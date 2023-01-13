@@ -49,6 +49,8 @@ public class SlackServiceImpl implements SlackService {
 
 	@Autowired
 	MailUtil mailUtil;
+	
+
 
 
 
@@ -57,7 +59,8 @@ public class SlackServiceImpl implements SlackService {
 	 * getConversationHistory method use for fetch  all the messages of channel 
 	 */
 
-	public  boolean  getConversationHistory() {
+	public  boolean  getConversationHistory(String channelID) {
+		
 
 		DateUtil dateutil=new DateUtil();
 		Date date=null;
@@ -69,15 +72,18 @@ public class SlackServiceImpl implements SlackService {
 		MethodsClient  client = Slack.getInstance().methods();
 		ConversationsListResponse channelList=publicChannelList();
 		HashMap<String,String> userWithEmailList=this.getUserList();                                  
-		for(Conversation channel:channelList.getChannels()) {
-			System.out.println(channel.getName());
+//		for(Conversation channel:channelList.getChannels()) {
+//			System.out.println(channel.getName());
+//			if(channel.getId().equals(channelNAme)) {
+				
+			
 			var logger = LoggerFactory.getLogger("my-awesome-slack-app");
 			try {
 				// Call the conversations.history method using the built-in WebClient
 				ConversationsHistoryResponse  result = client.conversationsHistory(r -> r
 						// The token you used to initialize your app
 						.token(slackToken)
-						.channel(channel.getId())
+						.channel(channelID)
 						);
 				for(Message message:result.getMessages()) {
 					if(userWithEmailList.containsKey(message.getUser())) {
@@ -88,20 +94,21 @@ public class SlackServiceImpl implements SlackService {
 						}
 					}
 				}
-				boolean fileWriterResult=fileWriter.messageWriter(listOfmessagesOfUser,channel.getName(),currentDate,filepath);
+				boolean fileWriterResult=fileWriter.messageWriter(listOfmessagesOfUser,channelID,currentDate,filepath);
 				if(fileWriterResult) {
-					listOfmessagesOfUser.clear();
-					continue;
+					return true;
+//					listOfmessagesOfUser.clear();
+//					continue;
 				}
-				else {
-					return false;
-				}
-			}
-			catch(Exception exception) {
+				
+			}catch(Exception exception) {
 				logger.error(exception.getMessage());
 			}
-		}
-		return true;
+//			}
+			
+			
+//		}
+		return false;
 
 
 
@@ -116,7 +123,7 @@ public class SlackServiceImpl implements SlackService {
 	 * 
 	 */
 	public HashMap<String,String> getUserList() {
-		HashMap<String,String> userWithName=new HashMap<>();
+		HashMap<String,String> userIDWithName=new HashMap<>();
 		UsersListResponse userListResponse;
 		MethodsClient  client = Slack.getInstance().methods();
 		try {
@@ -127,16 +134,16 @@ public class SlackServiceImpl implements SlackService {
 			List<com.slack.api.model.User> users=   userList.getMembers();
 			for(User user:users) {
 				if(user.getProfile().getRealName()!=null) {
-					userWithName.put(user.getId(), user.getProfile().getRealName());
+					userIDWithName.put(user.getId(), user.getProfile().getRealName());
 				}
 			}
-			System.out.println(userWithName);
+			System.out.println(userIDWithName);
 
 
 		}catch(Exception exception) {
 			logger.error(exception.getMessage());
 		}
-		return userWithName;
+		return userIDWithName;
 
 	}
 
@@ -166,11 +173,11 @@ public class SlackServiceImpl implements SlackService {
 	}
 
 
-	public boolean sendingEmail() {
+	public boolean sendingEmail(String channelID) {
 		try {
-			List<Conversation> channelList=  this.publicChannelList().getChannels();
+	
 			Date currentDate=new Date(System.currentTimeMillis());
-			boolean mailSendingResult= mailUtil.mailSender(channelList, currentDate);
+			boolean mailSendingResult= mailUtil.mailSender(channelID, currentDate);
 			if(mailSendingResult) {
 				return true;
 			}

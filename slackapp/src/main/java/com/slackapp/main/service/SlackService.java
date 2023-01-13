@@ -12,7 +12,7 @@ import com.slack.api.model.Message;
 
 public interface SlackService {
 	
-	boolean  getConversationHistory();
+	boolean  getConversationHistory(String channelID);
 	
 	HashMap<String, String> getUserList();
 

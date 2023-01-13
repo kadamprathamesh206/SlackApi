@@ -36,12 +36,12 @@ public class SlackController {
 	SlackServiceImpl slackServiceImpl;
 
 	@GetMapping("/getconversation")	
-	public ResponseEntity<?> conversationHistory(){
+	public ResponseEntity<?> conversationHistory(@RequestParam("channelID") String channelID){
 		try {
-			boolean fileWriterResult=this.slackServiceImpl.getConversationHistory();
+			boolean fileWriterResult=this.slackServiceImpl.getConversationHistory(channelID);
 			if(fileWriterResult) {
 				if(isEmail) {
-					boolean mailSendResult=this.slackServiceImpl.sendingEmail();
+					boolean mailSendResult=this.slackServiceImpl.sendingEmail(channelID);
 					if(mailSendResult) {
 						return new ResponseEntity<>("Email Sent Successfully",HttpStatus.OK);
 					}else {
